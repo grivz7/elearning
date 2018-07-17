@@ -1,0 +1,210 @@
+---
+title: "Regresi Linear"
+output:
+  html_document:
+    df_print: paged
+  highlight: tango
+  fig_width: 8
+  word_document: null
+---
+  Analisis regresi adalah metode yang biasa digunakan untuk mengevaluasi hubungan antara satu peubah dengan peubah lainnya atau satu peubah dengan beberapa peubah lainnya. Analisis ini merupakan salah satu metode statistik yang banyak digunakan karena memberikan metode yang sederhana untuk menetapkan hubungan fungsional diantara beberapa peubah.
+  Analisis regresi yang sering digunakan adalah regresi linear. Dalam perkembangannya, terdapat dua macam analisis regresi linear yang digunakan, yaitu analisis regresi linear sederhana dan analisis regresi linear berganda. Pada model regresi linear sederhana, hanya melibatkan satu peubah respon dan satu peubah penjelas, sedangkan pada analisis regresi linear berganda melibatkan lebih dari satu peubah penjelas.
+\
+\
+library yang diperlukan dalam analisis ini yaitu:
+```{r message=FALSE,warning=FALSE}
+library(olsrr)
+library(MASS)
+library(lmtest)
+library(car)
+```
+#Import data dari file csv ke R
+Data yang digunakan adalah  data sekunder yang diambil dari BPS tentang produksi padi di Indonesia tahun 2010. Data meliputi produksi padi di Indonesia (Y_1) dengan satuan ton, luas lahan di tiap provinsi (X_1) dengan satuan hektar, Produktivitas (X_2) dengan satuan kuintal per hektar,  nilai tukar petani di tiap provinsi (X_3) dengan satuan persen, dan jumlah penduduk tiap provinsi (X_4).
+```{r, include=TRUE}
+data<- read.csv("D:/Job/E learning/Regression Tree/elearning/padi2.csv",header=T)
+str(data)
+```
+Adapun tahapan dalam analisis regresi linear adalah sebagai berikut:
+\
+1. Pendugaan Persamaan Regresi
+\
+2. Pengujian Parameter
+\
+3. Pemeriksaan asumsi
+\
+4. Penanganan asumsi
+\
+5. Pemeriksaan pencilan dan Amatan Berpengaruh
+
+#Pendugaan Persamaan Regresi
+```{r, include=TRUE}
+model<- lm(produksi.padi ~ luas.lahan+produktivitas+NTP+Penduduk, data = data)
+summary(model)
+```
+#Pengujian Parameter
+a.	Uji-t
+\
+Uji-t dimaksudkan untuk menguji pengaruh setiap peubah penjelas secara satu per satu terhadap peubah responnya. 
+
+Coefficients:
+                Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    2.148e+05  7.404e+05   0.290   0.7739    
+luas.lahan     5.415e+00  5.493e-01   9.859 1.32e-10
+produktivitas  1.610e+04  9.424e+03   1.709   0.0986   
+NTP           -1.355e+04  7.288e+03  -1.859   0.0736  
+Penduduk       1.517e-01  1.666e-02   9.107 7.27e-10
+
+
+Berdasarkan output diatas, peubah produktivitas dan NTP mempunyai p-value lebih besar dari $\alpha=0.05$ sehingga nilai tukar petani dan produktivitas tidak memiliki hubungan linear dengan produksi padi.
+
+b. Uji-F
+\
+Uji-F dimaksudkan untuk mengetahui peubah-peubah penjelas yang ada dalam model berpengaruh secara serempak terhadap respon atau tidak. 
+
+F-statistic: 487.7 on 4 and 28 DF,  p-value: < 2.2e-16
+
+Berdasarkan output diatas,  p-value lebih kecil dari $\alpha=0.05$ sehingga produksi padi mempunyai hubungan linear dengan minimal satu peubah penjelas.
+
+#Regresi Bertatar (Stepwise Regression)
+Prosedur regresi bertatar (stepwise regression)merupakan prosedur statistik untuk menentukan peubah mana yang akan dimasukkan ke dalam persamaan regresi. Prosedur ini pada dasarnya merupakan kombinasi dari prosedur eliminasi langkah mundur (backward regression) dan prosedur eliminasi langkah maju (forward regression).
+```{r, include=TRUE}
+model<- lm(produksi.padi ~ luas.lahan+produktivitas+NTP+Penduduk, data = data)
+ols_step_both_p(model)
+
+```
+Berdasarkan output diatas, Persamaan regresi terbaik yang diperoleh adalah dengan mengeliminasi peubah nilai tukar petani dan peubah produktivitas petani. Sehingga persamaan regresi yang diperoleh 
+\
+Y =-417860.530   +  0.171 Jumlah Penduduk + 4.956 Luas Lahan
+
+#Pemeriksaan Asumsi
+Asumsi Klasik pada Model Regresi Linear
+\
+1. Sisaan menyebar normal
+\
+2. Ragam sisaan homogen 
+\
+3. Sisaan saling bebas
+\
+4. Tidak ada Multikolineritas terhadap peubah penjelas.
+
+###1. Mendeteksi sisaan Menyebar Normal
+Dalam mendeteksi sisaan menyebar normal dapat dilakukan dengan cara eksplorasi dan uji formal
+
+```{r, include=TRUE}
+model2<- lm(produksi.padi ~ luas.lahan+Penduduk, data = data)
+resmodel2<-residuals(model2)
+qqnorm(resmodel2, xlab="Standard Normal Quantiles",ylab = "Sisaan")
+qqline(resmodel2,col=2)
+
+hist(resmodel2, freq=FALSE, main="Histogram Sisaan")
+
+curve(dnorm(x,mean=mean(resmodel2),sd=sd(resmodel2)),add=T,lwd=1.5,col="red")
+
+```
+```{r, include=TRUE}
+resmodel2<-residuals(model2)
+ks.test(resmodel2, "pnorm")
+```
+
+berdasarkan histogram dan normal qq-plot diatas menunjukkan bahwa sisaan tidak menyebar normal tetapi sisan menjulur ke kiri. selain itu, berdasarkan Uji Kolmogorov Smirnov P-value menunjukkan nilai sebesar 3.78e-12 lebih kecil dari $\alpha=0.05$  sehingga dapat dikatakan sisaan tidak menyebar normal.
+\
+\
+2. Mendeteksi Kehomogenan Ragam
+```{r, include=TRUE}
+ncvTest(model2)
+pre<-predict(model2)
+plot(pre,resmodel2,xlab="y duga",ylab="Sisaan")
+abline(c(0,0),lty=2, col="red")
+
+
+```
+
+berdasarkan plot sisaan dengan nilai y duga terlihat bahwa lebar pita tidak sama sehingga dapat dikatakan bhwa ragam sisaan tidak homodgen
+\
+3. Mendeteksi Sisaan Saling Bebas
+```{r}
+acf(resmodel2)
+dwtest(model2, alt="two.sided")
+```
+berdasarkan plot ACF sisaan diatas menunjukkan bahwa tidak terdapat sisaan yang saling berkorelasi. selain itu, pada uji Durbin Watson menunjukkan p-value sebesar 0.7723 lebih besar  dari $\alpha=0.05$ sehingga dapat disimpulkan bahwa sisaan saling bebas.
+
+#Penanganan Asumsi
+sisaan model yang diperoleh tidak menyebar normal maka dilakukan penanganan dengan mentransformasi peubah respon. Metode Box-Cox dapat digunakan sebagai alternatif penentuan metode transformasi yang terbaik.
+```{r, include=TRUE}
+bc <- boxcox(produksi.padi ~ luas.lahan+Penduduk, data = data)
+lambda <- bc$x[which.max(bc$y)]
+lambda
+range(bc$x[bc$y > max(bc$y)-qchisq(0.95,1)/2])
+lam<-bc$x
+lik<-bc$y
+boxcox <- cbind(lam, lik)
+sorted_bc <- boxcox[order(-lik),]
+head(sorted_bc, n = 10)
+
+```
+berdasarkan grafik diatas menunjukkan bahwa nilai $\lambda$ optimum yaitu 0.7474 dan range $\lambda$ berada diantara 0.6262 sampai dengan 0.8282. sedangkan nilai $\lambda$ standar yaitu -1/2, 0, 1/2, 1. Maka dipilih nilai ?? yang paling dekat dengan range $\lambda$ yang diperoleh yaitu 0.5. transformasi untuk $\lambda=0.05$ yaitu transformasi berupa $\sqrt{Y}$
+
+
+#Model Hasil Transformasi
+```{r}
+model3<- lm(produksi.padi^(1/2) ~ luas.lahan+Penduduk, data = data)
+summary(model3)
+```
+
+Berdasarkan estimasi parameter model regresi hasil transformasi diperoleh bahwa peubah penduduk mempunyai p-value lebih besar dari $\alpha=0.05$ sehingga peubah penduduk tidak signifikan. selanjutnya dilakukan diagnostik model dengan memeriksa kembali semua asumsi.
+
+```{r}
+resmodel3<-residuals(model3)
+qqnorm(resmodel3, xlab="Standard Normal Quantiles",ylab = "Sisaan")
+qqline(resmodel3,col=2)
+
+hist(resmodel3, freq=FALSE, main="Histogram Sisaan")
+
+curve(dnorm(x,mean=mean(resmodel3),sd=sd(resmodel3)),add=T,lwd=1.5,col="red")
+
+pre3<-predict(model3)
+plot(pre3,resmodel3,xlab="y duga",ylab="Sisaan")
+abline(c(0,0),lty=2, col="red")
+```
+
+berdasarkan output diatas, histogram, boxplot dan qq-plot sisaan model regresi hasil ransformasi menunjukkan bahwa sisaan telah menyebar normal. plot antara sisaan dan y duga menunjukkan lebar pita yang sama sehigga dapat dikatakan bahwa sisaan homogen.
+```{r}
+resmodel3<-residuals(model3)
+acf(resmodel3, main="Plot Korelasi Residual")
+durbinWatsonTest(model3)
+```
+berdasarkan plot ACF sisaan model hasil transformasi diatas menunjukkan bahwa tidak terdapat sisaan yang saling berkorelasi. selain itu, pada uji Durbin Watson menunjukkan p-value sebesar 0.7723 lebih besar  dari $\alpha=0.05$ sehingga dapat disimpulkan bahwa sisaan saling bebas.
+
+#Pencilan dan Amatan Berpengaruh
+Amatan ekstrim terhadap peubah respon disebut dengan pencilan (outlier), sedangkan pada peubah penjelas disebut dengan  laverage point. Amatan ekstim yang mempunyai pengaruh terhadap koefisien regresi disebut dengan amatan berpengaruh (Influential Observation).
+\
+
+```{r}
+#plot Standardized Residual 
+ols_plot_resid_stand(model)
+```
+
+
+```{r}
+#plot studentized Residual
+ols_plot_resid_stud(model3)
+```
+
+```{r}
+##laverage
+ols_plot_resid_lev(model3)
+```
+
+```{r}
+qqPlot(model3, main="QQ Plot")
+outlierTest(model3)
+leveragePlots(model3)
+# Amatan Berpengaruh
+# Jarak Cook's 
+cutoff <- 4/((nrow(data)-length(model3$coefficients)-2)) 
+plot(model3, which=4, cook.levels=cutoff)
+# Influence Plot 
+influencePlot(model3, main="Plot Data Berpengaruh" )
+
+```
+
