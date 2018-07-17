@@ -1,0 +1,74 @@
+---
+title: "KNN"
+author: "Khairunisa"
+date: "14 Juli 2018"
+output: html_document
+---
+
+Pada tutorial ini, akan dibahas tentang langkah-langkah untuk pemodelan klasifikasi K-NN dengan menggunakan software R. Tutorial ini berfokus pada penerapan K-NN untuk memprediksi Indeks Pembangunan Manusia di **Indonesia**. 
+\
+\
+Sebelum memulai ini, diperlukan untuk menginstall beberapa package R yaitu:
+```{r setup, include=FALSE}
+library(ggplot2)
+library(ISLR)
+library(caret)
+library(ROCR)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Input Data
+
+Indeks pembangunan manusia adalah salah satu alat ukur pencapaian kualitas hidup satu wilayah bahkan negara. Terdapat 3 komponen dasar peyusun Indeks Pembangunan Manusia(IPM) yaitu dimensi kesehatan, dimensi pengetahuan, dan dimensi hidup layak (BPS, 2014). Untuk mengukur dimensi kesehatan, digunakan angka harapan hidup waktu lahir. Selanjutnya untuk mengukur dimensi pengetahuan digunakan gabungan indikator harapan lama sekolah dan rata-rata lama sekolah. Dimensi hidup layak digunakan indikator kemampuan daya beli masyarakat terhadap sejumlah kebutuhan pokok yang dilihat dari rata-rata besarnya pengeluaran per kapita disesuaikan.
+
+```{r message=FALSE, warning=FALSE}
+data<-read.csv("D:/Job/E learning/Regression Tree/elearning/ipm2.csv",sep=",")
+data<-data[,-5]
+```
+data yang digunakan adalah data IPM kabupaten dan kota di indonesia dari tahun 2004 sampai dengan tahun 2012.Dengan dua kelas : baik yaitu nilai IPM 70 ke atas dan tidak baik dengan nilai IPM lebih kecil dari 70 
+
+##Membagi Data Train dan Test
+proses membagi data menjadi train dan test dalam hal ini berguna untuk menghindari overfitting saat model digunakan untuk memprediksi data lain yang berbeda dengan data yang digunakan untuk membuat model. Dalam kasus kali ini data dibagi menjadi 2, yaitu data training yang selanjutnya akan digunakan untuk membuat model sebesar 80% dari banyaknya data dan data testing sisanya akan digunakan untuk memprediksi model tersebut.
+```{r  message=FALSE, warning=FALSE}
+set.seed(300)
+#Spliting data as training and test set. Using createDataPartition() function from caret
+indxTrain <- createDataPartition(y = data$grup,p = 0.8,list = FALSE)
+training <- data[indxTrain,]
+testing <- data[-indxTrain,]
+```
+#Mengecek proporsi kelas masing-masing data
+sebaiknya proporsi kelas masing-masing data sama, dapat dilihat pada kasus dibawah ini bahwa proporsi kelas untuk data training dan testing sama.
+```{r  message=FALSE, warning=FALSE}
+#Checking distibution in origanl data and partitioned data
+prop.table(table(training$grup)) * 100
+prop.table(table(testing$grup)) * 100
+prop.table(table(data$grup)) * 100
+```
+
+##Membakukan data
+sebelum melakukan proses pemodelan ada baiknya data asli dibakukan terlebih dahulu, sehingga satuan dari setiap fitur sama dan mempermudah proses iterasi.
+```{r  message=FALSE, warning=FALSE}
+trainX <- training[,names(training) != "grup"]
+preProcValues <- preProcess(x = trainX,method = c("center", "scale"))
+preProcValues
+```
+
+```{r  message=FALSE, warning=FALSE}
+set.seed(400)
+ctrl <- trainControl(method="cv",number = 10) #,classProbs=TRUE,summaryFunction = twoClassSummary)
+knnFit <- train(grup ~ ., data = training, method = "knn", trControl = ctrl, preProcess = c("center","scale"), tuneLength = 20)
+knnFit
+```
+
+##Penentuan Banyak tetangga terdekat
+```{r  message=FALSE, warning=FALSE}
+plot(knnFit)
+```
+##Prediksi Model Untuk Data testing
+```{r  message=FALSE, warning=FALSE}
+knnPredict <- predict(knnFit,newdata = testing )
+confusionMatrix(knnPredict, testing$grup )
+```
+
+
+
