@@ -7,4 +7,4 @@ Daftar Materi E-Learning:
 3. [Regresi Linear](https://statipb.github.io/elearning/regresilinear.html)
 4. [Pohon Klasifikasi](https://statipb.github.io/elearning/tree_wdbc.html)
 5. [Pohon Regresi (Regression Tree)](https://statipb.github.io/elearning/reg.html)
-
+6. [dplyr](https://statipb.github.io/elearning/dplyrtutor.html)
