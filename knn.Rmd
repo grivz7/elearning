@@ -1,7 +1,5 @@
 ---
 title: "KNN"
-author: "Khairunisa"
-date: "14 Juli 2018"
 output: html_document
 ---
 
