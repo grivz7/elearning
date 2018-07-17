@@ -1,5 +1,8 @@
 ## Selamat Datang di Situs E-Learning Departement Statistika IPB
 
+Daftar Materi E-Learning
+5. [Pohon Regresi (Regression Tree)](https://statipb.github.io/elearning/reg.html)
+
 You can use the [editor on GitHub](https://github.com/statipb/elearning/edit/gh-pages/README.md) to maintain and preview the content for your website in Markdown files.
 
 Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
