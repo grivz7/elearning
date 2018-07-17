@@ -1,0 +1,171 @@
+---
+title: "Diagnosa Kanker Payudara Menggunakan Pohon Klasifikasi"
+output:
+  html_document:
+    df_print: paged
+  word_document:
+    fig_width: 8
+    highlight: tango
+always_allow_html: yes
+---
+Tutorial ini akan membahas mengenai langkah-langkah dalam menganalisis data menggunakan Pohon Klasifikasi pada software R. Analisis klasifikasi digunakan dalam mendiagnosa jenis kanker payudara yang dialami penderita. Hasil diagnosa diperoleh dari tes biopsy Fine-Needle Aspirate (FNA) pada karakteristik inti sel dari sebuah gambar digital massa payudara.   
+
+Langkah pertama yang dilakukan adalah dengan memanggil beberapa package yang dibutuhkan, seperti:
+```{r message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+library(psych)
+library(MASS)
+library(caret)
+library(rpart)
+library(mlr)
+library(parallelMap)
+library (VIM)
+library(plotly)
+library(viridis)
+library(rpart.plot)
+```
+Kemudian dilakukan import data dari .csv ke dalam file data R. Data yang digunakan merupakan data dari Wisconsin Diagnosis Breast Cancer (WDBC) dari UCI machine learning repository yang terdiri atas 569 amatan dengan 30 peubah bebas dan 1 peubah respon. 
+\
+\
+Peubah respon merupakan hasil diagnosa yang diperoleh dari tes biopsy Fine-Needle Aspirate (FNA) pada karakteristik inti sel dari sebuah gambar digital massa payudara. Peubah respon ini terdiri atas 2 kelas yaitu M (Malignant) atau kanker ganas sebesar 212 kasus dan B (Benign) atau kanker jinak sebesar 357.
+\
+\
+Peubah bebas yang digunakan merupakan peubah yang membangun karakteristik dari sel nukleus. Setiap sel nukleus di definisikan melalui 10 peubah. Setiap peubah dihitung rata-rata, standar error dan nilai terbesar sehingga menghasikan 30 peubah. 10 peubah yang dimaksud yakni: 
+\
+\item
+
+1. Radius             : rata-rata panjang segmen garis radial dari pusat massa. 
+2. Textur             : varians dari intensitas grayscale dalam komponen pixel. 
+3. Perimeter          : jumlah dari jarak antara titik-titik pada garis keliling inti sel.
+4. Area               : jumlah pixel batas bagian dalam batas ditambah satu setengah dari pixel garis keliling.
+5. Compactness        : gabungan perimeter dan area untuk memberikan ukuran kekompakan sel. 
+6. Smoothness         : besar perbedaan antara panjang masing- masing garis radial dan rata-rata panjang dua garis radial yang mengelilinginya.
+7. Concavity          : ukuran semua lekukan dalam batas inti sel.
+8. Concave Points     : banyaknya titik batas yang terletak di daerah cekung batas, bukan besarnya tingkat kecekungan seperti pada concavity. 
+9. Symmetry           : besar perbedaan relatif pada panjang antara pasangan segmen garis tegak lurus terhadap sumbu utama kontur inti sel. 
+10. Fractal Dimension : "coast-line" didekati dengan menggunakan approximation.
+\
+\
+Import data dilakukan dengan cara sebagai berikut:
+```{r, include=TRUE}
+kankerpayudara<-read.csv("D:/Job/E learning/Regression Tree/elearning/WDBC.csv",header=T,sep=",")
+str(kankerpayudara)
+kankerpayudara$Jenis_Kanker<-as.factor(kankerpayudara$Jenis_Kanker)
+attach(kankerpayudara)
+```
+Data yang diinput merupakan data dari excel berektensi .csv dengan separator atau pemisah berupa koma, dan terdapat nama kolom (header) di dalam lokasi directory F. Dapat dilihat juga jenis-jenis data dari setiap peubah pada dataset.
+
+#Explorasi Data
+
+Sebelum melakukan analisis yang lebih dalam, dilakukan eksplorasi terhadap dataset. Hal ini bertujuan agar kita lebih memahami data secara mendalam. Eksplorasi data dapat dilakukan dengan melihat apakah terdapat missing value atau data hilang pada dataset. Identifikasi terhadap data hilang dapat dilakukan dengan cara sebagai berikut:
+```{r, include=TRUE}
+kankerpayudara[!complete.cases(kankerpayudara),]
+```
+Hasil menunjukan bahwa pada dataset ini tidak terdapat adanya data hilang.
+\
+\
+Kemudian kita dapat melihat visualisasi data dalam bentuk diagram batang dari peubah respon atau diagnosa terhadap jenis kanker payudara.
+```{r,include=TRUE}
+barplot((table(Jenis_Kanker)), col=c("dimgray", "lightcoral"))
+mtext("Jenis_Kanker", side=1, outer=F, line=2, cex=0.8)
+```
+\
+Diagram batang memperlihatkan bahwa banyaknya penderita yang di diagnosa kanker ganas atau malignant yang disimbolkan dengan angka 0 memiliki jumlah yang lebih sedikit jika dibandingkan dengan penderita yang di diagnosa kanker jinak atau benign.
+
+#Membagi Data Training dan Testing
+
+Setelah melakukan eksplorasi data, langkah berikutnya adalah dengan membagi data menjadi data training dan testing. Pembagian data ini bertujuan agar model yang dibangun tidak hanya mampu untuk memprediksi data training saja, namun juga data lain diluar data training. Pada tutorial ini, pembagian data training sebesar 80% dan data testing sebesar 20% berdasarkan peubah respon yakni diagnosa terhadap jenis kanker penderita.
+```{r,include=TRUE}
+set.seed(26)
+rindeks_train<-caret::createDataPartition(kankerpayudara$Jenis_Kanker, p=0.80, list=F)
+train<-kankerpayudara[rindeks_train,]
+test<-kankerpayudara[-rindeks_train,]
+```
+Sehingga data training yang dihasilkan berjumlah 456 data dan data testing berjumlah 113 data.
+
+#Grafik Pohon Klasifikasi
+
+Setelah kita lakukan eksplorasi data dan membagi data menjadi data training dan testing, lagkah berikutnya adalah dengan melakukan analisis pohon klasifikasi.
+Terlebih dahulu kita akan melihat grafik pohon yang dihasilkan. Grafik pohon ini dapat kita gunakan dalam mengidentifikasi proses spliting atau pembagian yang terjadi antara variabel bebas pada pohon klasifikasi. Adapun syntax yang dapat digunakan adalah sebagai berikut:
+```{r, include=T}
+mod=rpart(Jenis_Kanker~.,data=train,method = "class")
+prp(mod,box.palette = viridis::viridis(n=4,alpha=0.5),varlen=12)
+```
+\
+\
+Berdasarkan grafik pohon tersebut, pohon klasifikasi ini dibangun oleh beberapa variabel yakni max_radius atau nilai tertinggi dari radius, SE_Tekstur atau simpangan baku dari tekstur, Max_Conc atau nilai tertinggi dari concavity, dan Max_Tekstur atau nilai tertinggi dari tekstur. 
+\
+\
+Di dalam grafik pohon klasifikasi terdapat root node (node akar) dimana simpul ini berada di atas dan pohonnya tumbuh ke bawah. Semula semua data berada pada simpul akar dan selanjutnya bercabang menjadi dua atau lebih simpul dengan aturan pencabangan tertentu. Simpul-simpul baru berisi pengamatan yang lebih sedikit, dan kemudian masing-masing dapat bercabang kembali menjadi simpul-simpul yang baru. Simpul akhir yang tidak mengalami pencabangan biasanya dikenal sebagai simpul daun (leaf node), yang pada sebagian literatur disebut dengan istilah simpul akhir (terminal node). Sedangkan simpul-simpul yang bercabang dikenal sebagai simpul antara (intermediate node). Simpul antara dikenal juga sebagai simpul keputusan (decision node) karena simpul ini menentukan bagaimana pengamatan tertentu masuk ke simpul-simpul di bawahnya.
+\
+\
+Dari pohon klasifikasi yang kita peroleh, root node atau simpul akar adalah variabel Max_Radius atau nilai terbesar dari rata-rata panjang segmen garis radial. Jika nilai Max_Radius lebih besar sama dengan 17, maka akan diteruskan ke simpul selanjutnya yaitu SE_Tekstur, apabila simpangan baku dari tekstur yang diukur dalam varians dari intensitas grayscale dalam komponen pixel bernilai lebih dari sama dengan 0.49, maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker ganas, dan sebaliknya jika SE_Tekstur bernilai kurang dari 0.49 maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker jinak. 
+\
+\
+Selanjutnya apabila nilai Max_Radius kurang dari 17, maka akan diteruskan ke simpul lainnya yaitu Mx_Concv_pnts atau nilai terbesar dari banyaknya titik batas yang terletak di daerah cekung batas. Apabila Mx_Concv_pnts bernilai kurang dari 0.14 maka pohon klasifikasi ini langsung akan memprediksi bahwa penderita memiliki jenis kanker jinak. Namun apabila Mx_Concv_pnts bernilai lebih dari sama dengan 0.14 maka akan dilanjutkan pada simpul berikutnya yaitu Max_Teks atau nilai tertinggi dari tekstur. Apabila Max_Teks bernilai lebih besar sama dengan 26 maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker ganas, begitupun selanjutnya jika Max_Tekstur bernilai kurang dari 26, maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker jinak.
+
+#Analisis Pohon Klasifikasi
+
+Setelah dilakukan analisis terhadap grafik pohon klasifikasi dan mengetahui bagaimana pohon klasifikasi memodelkan data ini, selanjutnya akan dilihat ukuran ketepatan dari model tersebut dalam memprediksi data yang tidak dimasukan saat pemodelan atau data test.
+\
+\
+Ukuran ketepatan yang dilakukan seperti akurasi, sensitifitas, dan spesifisitas. Akurasi merupakan tingkat ketepatan prediksi secara keseluruhan, yaitu persentase banyaknya prediksi yang tepat pada seluruh amatan-amatan dalam gugus data. Sensitifitas merupakan persentase ketepatan prediksi pada kelas positif, artinya amatan yang berada pada kelas positif diprediksi positif (true positive). Kondisi lain adalah ketika prediksi kelas tidak sesuai yang sesungguhnya. Kondisi ini terjadi ketika amatan yang berada pada kelas positif. Ukuran ketepatan prediksi lainnya adalah spesifisitas yang merupakan tingkat ketepatan pada kelas negatif, yaitu persentase banyaknya prediksi yang tepat pada amatan-amatan sesungguhnya negatif. Ketiga ukuran ketepatan prediksi ini diharapkan memiliki nilai yang besar. Semakin besar nilai yang dihasilkan maka dapat dikatakan bahwa hasil prediksi model pohon klasifikasi semakin mendekati nilai yang sebenarnya.
+```{r}
+tree_task<-makeClassifTask(data=kankerpayudara,target = "Jenis_Kanker",positive = 1)
+tree_learner<-makeLearner('classif.rpart')
+tree_train<-train(learner = tree_learner,task = tree_task)
+tree_pred<-predict(tree_train,newdata = test)
+tree_eval<-performance(tree_pred,measures = list(acc,tnr,tpr))
+tree_eval
+```
+\
+Berdasarkan hasil analisis pohon klasifikasi yang dilakukan, diperoleh hasil akurasi sebesar 95.58%, nilai spesifisitas sebesar 95.24%, dan nilai sensitifitas sebesar 95.77%. Nilai ini sudah sangat baik yang berarti nilai prediksi model pohon klasifikasi sudah cukup mendekati nilai yang sebenarnya.
+
+#Tuning Hyperparameter
+
+Setelah dilakukan analisis menggunakan model pohon klasifikasi, langkah berikutnya adalah dengan mencoba mengganti berbagai parameter dengan tujuan untuk meningkatkan akurasi model atau tuning hyperparameter.Hyperparameter merupakan parameter yang terdapat pada model dimana nilainya ditentukan dengan trial and error. Hyperparameter pada pohon klasifikasi adalah minimal split (minsplit), minimal bucket(minbucket), complexity parameter(cp), dan maximum depth(maxdepth). Namun Minimum bucket tidak dimasukan karena minbucket bergantung dari minsplit.
+
+Minsplit yang digunakan pada tutorial ini yakni 10,20,30,40, dan 50. CP yang digunakan adalah 0.001,0.00325,0.0055,0.00775,0.01 dan maxdepth yang digunakan yaitu 10,15,20,25,30.
+```{r, include=TRUE}
+tree2_task<-makeClassifTask(data=kankerpayudara,target = "Jenis_Kanker")
+tree2_ps<-makeParamSet(
+  makeDiscreteParam("minsplit",values=seq(10,50,length.out = 5)),
+  makeDiscreteParam("cp",values=seq(0.001,0.01,length.out = 5)),
+  makeDiscreteParam("maxdepth",values = seq(10,30,length.out = 5))
+)
+```
+\
+Tuning hyperparameter bisa dilakukan dengan Grid Search, yaitu suatu metode pencarian hyperparameter yang optimal dengan mempertimbangkan nilai ukuran kebaikan model tertentu (seperti akurasi,spesifisitas dan sensitifitas).Langkah yang dilakukan dalam Grid Search adalah membuat list hyperparameter yang ingin dicoba. Kemudian, secara otomatis grid search akan menampilkan hasil hyperparameter yang optimal. 
+```{r}
+parallelStart(mode="socket",cpus = 4)
+tree2_ctrl<-makeTuneControlGrid()
+tree2_rdesc<-makeResampleDesc("CV",iter=10)
+tree2_tune<-tuneParams("classif.rpart",
+                      task = tree2_task,par.set = tree2_ps,
+                      resampling =tree2_rdesc,control = tree2_ctrl,
+                      measures = list(acc,tnr,tpr))
+parallelStop()
+```
+Berdasarkan dari tuning hyperparameter, diperoleh minsplit yang optimal adalah 10, cp sebesar 0.01 dan maxdepth sebesar 15. Setelah  nilai hyperparameter optimal ditemukan, langkah selanjutnya adalah menerapkanya untuk memprediksi data testing. Langkah yang dilakukan adalah sebagai berikut:
+```{r, include=TRUE}
+tree2_learner<-makeLearner('classif.rpart',par.vals = tree2_tune$x)
+tree2_train<-train(learner = tree2_learner,task = tree2_task)
+tree2_pred<-predict(tree2_train,newdata = test)
+tree2_eval<-performance(tree2_pred,measures = list(acc,tnr,tpr))
+tree2_eval
+```
+Setelah dilakukan analisis pohon klasifikasi dengan menggunakan hyperparameter yang optimal, diperoleh nilai akurasi sebesar 96.46%, nilai spesifisitas sebesar 97.18% dan nilai sensitifitas sebesar 95.24%. Nilai ketepatatan prediksi engan menggunakan hyperparameter yang optimal mengalami peningkatan dibandingkan dengan sebelumnya.
+
+#Grafik Pohon Klasifikasi dengan Hyperparametric Optimal
+
+Setelah dilakukan tuning hyperparameter, dapat dilihat juga grafik pohon dengan menggunakan hyperparameter yang optimal sebagai berikut:
+```{r}
+mod1=rpart(Jenis_Kanker~.,data=train,method = "class",,minsplit=10,cp=0.01,maxdepth=15)
+prp(mod1,box.palette = viridis::viridis(n=4,alpha=0.5),varlen=12)
+```
+\
+Berdasarkan grafik pohon tersebut, pohon klasifikasi setelah menggunakan hyperparameter optimal mengalami perubahan, jika sebelumnya grafik pohon dibangun oleh 4 variabel yakni Max_radius, SE_Tekstur, Mx_Cncv_pnts, dan Max_Tekstur. Saat ini, grafik pohon dibangun oleh 5 variabel yaitu Max_radius, SE_Tekstur, Mx_Cncv_pnts, Max_Tekstur, dan Max_Area.
+\
+\
+Jika sebelumnya apabila Max_Teks bernilai lebih besar sama dengan 26 maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker ganas, begitupun sebaliknya jika Max_Tekstur bernilai kurang dari 26, maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker jinak. Akan tetapi, setelah menggunakan hyperparameter optimal, jika Max_Tekstur bernilai kurang dari 26, maka pohon klasifikasi ini akan dilanjutkan pada simpul berikutnya yakni Max_Area yaitu nilai terbesar jumlah pixel batas bagian dalam batas yang ditambah satu setengah dari pixel garis keliling. Apabila Max_Area bernilai lebih dari sama dengan 810, maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker ganas dan sebaliknya apabila Max_Area bernilai kurang dari 810, maka pohon klasifikasi ini akan memprediksi bahwa penderita memiliki jenis kanker jinak.
+
