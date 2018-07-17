@@ -161,7 +161,7 @@ $(document).ready(function () {
 <div id="membaca-data" class="section level3">
 <h3>Membaca Data</h3>
 <p>Data yang digunakan merupakan data dalam format csv (comma separated values) dengan nama “customer”. Untuk menggunakannya, terlebih dahulu kita lakukan proses import data csv menjadi data frame di R menggunakan fungsi read.csv().</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data&lt;-<span class="kw">read.csv</span>(<span class="st">&quot;D:/Job/E learning/Regression Tree/elearning/customer.csv&quot;</span>,<span class="dt">sep=</span><span class="st">&quot;;&quot;</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data&lt;-<span class="kw">read.csv</span>(<span class="st">&quot;D:/Job/E learning/regression Tree/elearning/customer.csv&quot;</span>,<span class="dt">sep=</span><span class="st">&quot;;&quot;</span>)</code></pre></div>
 <p>Jika perintah di atas dijalankan maka kita akan memiliki sebuah data frame dengan nama data, yang memiliki 5 (lima) peubah dan 5000 amatan. Nama dan penjelasan dari masing-masing peubah adalah sebagai berikut: 1. durasi : durasi suatu nomor telepon setiap melakukan panggilan.2. REV_VOICE : jumlah biaya yang dikeluarkan untuk pemakaian panggilan suara.3. REV_SMS : jumlah biaya yang dikeluarkan untuk pemakaian SMS.4. REV_DATA : jumlah biaya yang dikeluarkan untuk pemakaian paket data.5. Rasio.on.net : Rasio penggunaan panggilan ke sesama operator.Berikut ini adalah perintah untuk mencetak 6 (enam) baris pertama dari data menggunakan fungsi head() dan hasilnya.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(data)</code></pre></div>
 <div data-pagedtable="false">

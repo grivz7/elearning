@@ -20,7 +20,7 @@ library(ggplot2)
 Data yang digunakan merupakan data dalam format csv (comma separated values) dengan nama "customer". Untuk menggunakannya, terlebih dahulu kita lakukan proses import data csv menjadi data frame di R menggunakan fungsi read.csv().
 
 ```{r message=FALSE, warning=FALSE}
-data<-read.csv("D:/Job/E learning/Regression Tree/elearning/customer.csv",sep=";")
+data<-read.csv("D:/Job/E learning/regression Tree/elearning/customer.csv",sep=";")
 ```
 Jika perintah di atas dijalankan maka kita akan memiliki sebuah data frame dengan nama data, yang memiliki 5 (lima) peubah dan 5000 amatan.  Nama dan penjelasan dari masing-masing peubah adalah sebagai berikut:
 \item
